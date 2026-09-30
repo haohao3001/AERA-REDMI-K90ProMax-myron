@@ -1,0 +1,116 @@
+# init.recovery.qcom.rc — Redmi K90 Pro Max / myron
+# TWRP 16 / SM8850 / canoe / NXP KeyMint / Virtual A/B
+# SPDX-License-Identifier: Apache-2.0
+
+# -----------------------------------------------------------------------------
+# Init sequence:
+#   late-init → early-fs → fs → post-fs → firmware → boot
+#   boot → class_start default → class_start hal
+#
+# All vendor HAL services (keymint, gatekeeper, boot, health, qseecomd, etc.)
+# are defined in /vendor/etc/init/*.rc with class hal / early_hal / core,
+# and are started automatically by class_start in the main init.rc.
+#
+# ODM services (strongbox.nxp, weaver.nxp, vibrator, touch) are defined in
+# /odm/etc/init/*.rc, also auto-started by class_start hal.
+# -----------------------------------------------------------------------------
+
+on early-fs
+    write /proc/sys/walt/sched_lib_name "recovery,magiskboot,Updater,updater,update_engine_sideload"
+    write /proc/sys/walt/sched_lib_mask_force 255
+
+on init
+    start vendor.boot-qti
+
+on fs
+    # Stable bootdevice path
+    wait /dev/block/platform/soc/${ro.boot.bootdevice}
+    symlink /dev/block/platform/soc/${ro.boot.bootdevice} /dev/block/bootdevice
+
+    # Required for firmware sysfs fallback in recovery
+    write /proc/sys/kernel/firmware_config/force_sysfs_fallback 1
+
+    # QSEECom / KeyMint TA access
+    chmod 0660 /dev/qseecom
+    chown system drmrpc /dev/qseecom
+    chmod 0664 /dev/ion
+    chown system system /dev/ion
+
+    # Mount persist for KeyMint / QSEE credentials
+    mkdir /persist 0775 shell system
+    mkdir /mnt/vendor/persist 0775 shell system
+    wait /dev/block/by-name/persist
+    mount ext4 /dev/block/by-name/persist /persist noatime nosuid nodev barrier=1
+    mount none /persist /mnt/vendor/persist bind
+
+    # myron uses NXP KeyMint (same as popsicle)
+    setprop ro.keymint nxp
+    stop se_omapi
+    start se_omapi
+    start vendor.gatekeeper_default
+    start vendor.keymint
+    start vendor.secretkeeper
+    start vendor.qseecomd
+    start odm.weaver_nxp
+
+on boot
+    # ADB over USB
+    setprop sys.usb.config adb
+    setprop sys.usb.configfs 1
+
+on property:ro.boot.usbcontroller=*
+    setprop sys.usb.controller ${ro.boot.usbcontroller}
+
+# -----------------------------------------------------------------------------
+# Post-module-load setup
+# TWRP sets twrp.modules.loaded=true after loading kernel modules.
+# -----------------------------------------------------------------------------
+on property:twrp.modules.loaded=true
+
+    # Load ADSP for PMIC
+    wait /sys/kernel/boot_adsp/boot
+    write /sys/kernel/boot_adsp/boot 1
+    wait /sys/kernel/boot_adsp/ssr
+    write /sys/kernel/boot_adsp/ssr 1
+
+    # Wait for battery path
+    wait /sys/class/power_supply/battery
+
+    # QSEE / SMCInvoke nodes for KeyMint
+    wait /dev/smcinvoke
+    chown system drmrpc /dev/smcinvoke
+    chmod 0660 /dev/smcinvoke
+
+    wait /dev/qsee_ipc_irq_spss
+    chown system drmrpc /dev/qsee_ipc_irq_spss
+    chmod 0660 /dev/qsee_ipc_irq_spss
+
+    chmod 0444 /dev/dma_heap/qcom,qseecom
+    chmod 0444 /dev/dma_heap/qcom,qseecom-ta
+    chmod 0444 /dev/dma_heap/qcom,system
+    chmod 0444 /dev/dma_heap/system
+
+    # Touch: force normal coordinate reporting mode (disable raw/THP)
+    wait /sys/class/touch/touch_dev/enable_touch_raw
+    start touch-raw-guard
+
+    # Start health HAL for battery monitoring
+    start vendor.health-default
+    # Recovery drives qcom-hv-haptics directly through input force-feedback.
+    # Do not start Xiaomi AIDL vibrator HAL; it can mask direct haptics fallback.
+    stop vendor.secure_element
+    start vendor.secure_element
+
+# -----------------------------------------------------------------------------
+# myron-specific services
+# -----------------------------------------------------------------------------
+
+# Keep FocalTech in normal input-reporting mode
+# enable_touch_raw=1 blocks normal getevent coordinates
+service touch-raw-guard /system/bin/sh -c \
+    "while true; do echo 0 > /sys/class/touch/touch_dev/enable_touch_raw 2>/dev/null; sleep 1; done"
+    class main
+    user root
+    group root system input
+    oneshot
+    seclabel u:r:recovery:s0

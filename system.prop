@@ -1,0 +1,34 @@
+ro.adb.secure=0
+ro.board.platform=canoe
+ro.product.board=canoe
+ro.boot.dynamic_partitions=true
+ro.virtual_ab.enabled=true
+ro.virtual_ab.compression.enabled=true
+
+# Charger
+ro.charger.enable_suspend=true
+
+# Gatekeeper
+vendor.gatekeeper.is_security_level_spu=0
+
+# FUSE passthrough
+persist.sys.fuse.passthrough.enable=true
+
+# USB — confirmed from /proc/bootconfig: androidboot.usbcontroller=a600000.dwc3
+sys.usb.configfs=1
+ro.recovery.usb.vid=18D1
+ro.recovery.usb.adb.pid=D001
+ro.recovery.usb.fastboot.pid=4EE0
+ro.hardware=qcom
+
+# Display
+vendor.display.enable_spr=1
+ro.minui.pixel_format=RGBX_8888
+ro.minui.overscan_percent=0
+# DPI
+ro.sf.lcd_density=400
+
+# Boot device UFS path — confirmed from ro.boot.bootdevice (getprop)
+ro.boot.bootdevice=1d84000.ufshc
+# Keymint
+ro.hardware.keystore_desede=true
