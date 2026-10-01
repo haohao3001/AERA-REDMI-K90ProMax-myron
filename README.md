@@ -35,10 +35,10 @@ mka recoveryimage
 - [X] 刷入卡刷包
 - [X] 备份
 - [X] MTP
-- [X] ADB/FastbootD
 
 ## 不支持的特性
 - [ ] WLAN(为什么Recovery需要WLAN支持?)(遥遥无期)
+- [ ] ADB/FastbootD
 
 ## 注意
 对于假回锁用户，自行构建的OrangeFox不能直接刷入recovery分区(Release里的是处理好的)，需要使用仓库下的“transplanting_vbmeta.py”脚本把原厂recovery的avb信息移植过去后再刷入  
