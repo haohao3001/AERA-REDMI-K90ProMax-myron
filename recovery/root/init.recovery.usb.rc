@@ -32,6 +32,7 @@ on fs
     mount functionfs fastboot /dev/usb-ffs/fastboot uid=1000,gid=1000,rmode=0770,fmode=0660,no_disconnect=1
     setprop sys.usb.mtp.device_type 3
     setprop sys.usb.mtp.batchcancel 1
+    setprop sys.usb.config none
 
 on property:ro.boot.usbcontroller=*
     setprop sys.usb.controller ${ro.boot.usbcontroller}
@@ -43,7 +44,6 @@ on property:ro.boot.usbcontroller=*
 
 on property:sys.usb.config=none && property:sys.usb.configfs=1
     write /config/usb_gadget/g1/UDC "none"
-    stop adbd
     setprop sys.usb.ffs.ready 0
     setprop sys.usb.ffs.mtp.ready 0
     write /config/usb_gadget/g1/bDeviceClass 0
@@ -53,9 +53,8 @@ on property:sys.usb.config=none && property:sys.usb.configfs=1
     rm /config/usb_gadget/g1/configs/b.1/f2
     rm /config/usb_gadget/g1/configs/b.1/f3
     setprop sys.usb.state ${sys.usb.config}
-
-on property:init.svc.adbd=stopped
-    setprop sys.usb.ffs.ready 0
+    stop adbd
+    stop fastbootd
 
 on property:sys.usb.config=adb && property:sys.usb.configfs=1
     write /config/usb_gadget/g1/UDC "none"
@@ -131,6 +130,7 @@ on property:sys.usb.config=fastboot && property:sys.usb.configfs=1
     rm /config/usb_gadget/g1/configs/b.1/f2
     rm /config/usb_gadget/g1/configs/b.1/f3
     setprop sys.usb.state none
+    start fastboot
 
 on property:sys.usb.ffs.ready=1 && property:sys.usb.config=fastboot && property:sys.usb.state=none && property:sys.usb.configfs=1
     write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "fastboot"
