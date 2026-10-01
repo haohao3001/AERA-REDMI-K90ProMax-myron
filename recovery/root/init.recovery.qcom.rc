@@ -45,18 +45,13 @@ on fs
 
     # myron uses NXP KeyMint (same as popsicle)
     setprop ro.keymint nxp
-    stop se_omapi
-    start se_omapi
+
+    #For Decrypt
     start vendor.gatekeeper_default
     start vendor.keymint
     start vendor.secretkeeper
     start vendor.qseecomd
     start odm.weaver_nxp
-
-on boot
-    # ADB over USB
-    setprop sys.usb.config adb
-    setprop sys.usb.configfs 1
 
 on property:ro.boot.usbcontroller=*
     setprop sys.usb.controller ${ro.boot.usbcontroller}
@@ -96,8 +91,8 @@ on property:twrp.modules.loaded=true
 
     # Start health HAL for battery monitoring
     start vendor.health-default
-    # Recovery drives qcom-hv-haptics directly through input force-feedback.
-    # Do not start Xiaomi AIDL vibrator HAL; it can mask direct haptics fallback.
+    
+    #For Decrypt
     stop vendor.secure_element
     start vendor.secure_element
 
